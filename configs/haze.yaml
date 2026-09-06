@@ -1,0 +1,45 @@
+# ==========================================================
+# 去雾 (雾霾 / 雨雾叠加)
+# 与 rain.yaml 共用同一份统一权重，对应官方 test_set=rainfog 场景
+# ==========================================================
+name: haze
+display_name: 去雾 (雾霾/雨雾叠加)
+description: 针对雾霾与雨雾叠加退化的复原，对应官方 test_set=rainfog 场景。
+
+restorer: weatherdiff
+
+weights:
+  path: weights/WeatherDiff64.pth.tar
+
+data:
+  image_size: 64
+  channels: 3
+  conditional: true
+  max_side: 1024
+  size_multiple: 16
+
+model:
+  type: openai
+  in_channels: 3
+  out_ch: 3
+  ch: 128
+  ch_mult: [1, 2, 3, 4]
+  num_res_blocks: 2
+  attn_resolutions: [16]
+  dropout: 0.0
+  resamp_with_conv: true
+  ema: true
+  ema_rate: 0.999
+
+diffusion:
+  beta_schedule: linear
+  beta_start: 0.0001
+  beta_end: 0.02
+  num_diffusion_timesteps: 1000
+
+sampling:
+  timesteps: 25
+  grid_r: 16
+  eta: 0.0
+  patch_batch_size: 32
+  seed: 61

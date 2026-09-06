@@ -1,0 +1,50 @@
+# ==========================================================
+# 去雨 (雨滴 / 雨纹)
+#
+# 官方 WeatherDiffusion 只公开了"统一多天气模型" WeatherDiff64 / WeatherDiff128，
+# 没有分任务权重，所以 rain / haze / snow 三个配置共用同一份权重，
+# 区别在于采样参数预设与评测时的分类统计。
+# 网络结构字段与官方 configs/allweather.yml 完全一致，可直接加载权重。
+# ==========================================================
+name: rain
+display_name: 去雨 (雨滴/雨纹)
+description: 针对镜头雨滴与雨纹退化的复原，对应官方 test_set=raindrop 场景。
+
+restorer: weatherdiff
+
+weights:
+  # 由 scripts/download_weights.py 下载到这里
+  path: weights/WeatherDiff64.pth.tar
+
+data:
+  image_size: 64          # 训练时的 patch 尺寸，也是推理滑窗大小，勿改
+  channels: 3
+  conditional: true       # 条件扩散: UNet 输入通道 = 3(条件) + 3(噪声)
+  max_side: 1024          # 长边上限，控制耗时与显存
+  size_multiple: 16       # 尺寸对齐倍数(官方为 16)
+
+model:
+  type: openai
+  in_channels: 3
+  out_ch: 3
+  ch: 128
+  ch_mult: [1, 2, 3, 4]
+  num_res_blocks: 2
+  attn_resolutions: [16]
+  dropout: 0.0
+  resamp_with_conv: true
+  ema: true
+  ema_rate: 0.999
+
+diffusion:
+  beta_schedule: linear
+  beta_start: 0.0001
+  beta_end: 0.02
+  num_diffusion_timesteps: 1000
+
+sampling:
+  timesteps: 25           # DDIM 采样步数，越小越快（官方推理默认 25）
+  grid_r: 16              # 滑窗步长，越大越快(patch 数量减少，质量略降)
+  eta: 0.0                # DDIM 随机性，官方推理固定用 0（确定性采样）
+  patch_batch_size: 32    # 一次并行推理的 patch 数，显存不足会自动减半
+  seed: 61

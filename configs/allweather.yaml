@@ -1,0 +1,46 @@
+# ==========================================================
+# All-in-One 统一模型（不区分天气类型，一个模型全处理）
+# 与 rain/haze/snow 用的是同一份权重，只是不做天气区分，
+# 用于"单模型处理多种叠加退化"的演示与对照
+# ==========================================================
+name: allweather
+display_name: 统一模型 (All-in-One)
+description: 单一扩散模型同时处理雨、雾、雪等多种退化，适合演示真实场景的叠加退化。
+
+restorer: weatherdiff
+
+weights:
+  path: weights/WeatherDiff64.pth.tar
+
+data:
+  image_size: 64
+  channels: 3
+  conditional: true
+  max_side: 1024
+  size_multiple: 16
+
+model:
+  type: openai
+  in_channels: 3
+  out_ch: 3
+  ch: 128
+  ch_mult: [1, 2, 3, 4]
+  num_res_blocks: 2
+  attn_resolutions: [16]
+  dropout: 0.0
+  resamp_with_conv: true
+  ema: true
+  ema_rate: 0.999
+
+diffusion:
+  beta_schedule: linear
+  beta_start: 0.0001
+  beta_end: 0.02
+  num_diffusion_timesteps: 1000
+
+sampling:
+  timesteps: 25
+  grid_r: 16
+  eta: 0.0
+  patch_batch_size: 32
+  seed: 61

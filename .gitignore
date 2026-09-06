@@ -1,0 +1,27 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# --- 模型权重(体积大，禁止入库) ---
+weights/*
+!weights/README.md
+
+# --- 数据集与真实测试样例(体积大，禁止入库) ---
+data/*
+!data/README.md
+
+# --- 运行产物 ---
+outputs/
+results/
+logs/
+*.log
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

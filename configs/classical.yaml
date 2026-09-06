@@ -1,0 +1,63 @@
+# ==========================================================
+# 传统方法（无需权重，开箱即用，可直接演示）
+#
+# 流程: 自动判别退化类型 -> (雾则先去雾) -> 导向滤波分层
+#       -> detail 层亮尖峰用中值替换(去雨纹/雪花) -> 可选锐化
+#
+# 三类天气的最优参数不同，所以下面按 profile 分别给了参数，
+# profile: auto 时会自动判别是雨/雾/雪；也可手动指定 rain / haze / snow。
+# 参数由 scripts/tune_classical.py 网格搜索得到。
+# ==========================================================
+name: classical
+display_name: 传统方法 (无需权重, 可直接演示)
+description: 自动判别雨/雾/雪，用导向滤波分层 + 中值尖峰抑制 + 暗通道去雾完成复原，无需任何权重。
+
+restorer: classical
+
+data:
+  max_side: 1024
+  size_multiple: 1
+
+classical:
+  profile: auto            # auto / rain / haze / snow
+  # 默认参数（profile 未覆盖的项用这里的值）
+  dehaze: auto             # auto: 判别为雾时才去雾; true 强制去雾; false 不去雾
+  guided_radius: 8         # 导向滤波半径，越大 base 越平滑
+  guided_eps: 0.01         # 导向滤波正则项(0~1 值域)
+  detail_median: 3         # 第一轮中值窗口，清细雨纹/小雪点
+  second_median: 5         # 第二轮中值窗口，清粗雨纹/大雪花，设 0 关闭
+  spike_tau: 0.015         # 尖峰判定阈值，越小去得越狠(可能损失纹理)
+  sharpen: 0.0             # 复原后锐化强度
+  bright_median: 0         # 亮斑抑制窗口(去大颗雪花/粗雨纹)，0 表示关闭
+  bright_tau: 0.08         # 亮斑判定阈值(0~1)，越小去得越狠
+  bright_kernel: square    # square: 方形窗口(雪); horizontal: 1xK 水平窗口(雨纹近垂直，效果更好)
+  dcp_patch: 15            # 去雾: 暗通道窗口
+  dcp_omega: 0.92          # 去雾: 去雾程度
+  dcp_t0: 0.12             # 去雾: 透射率下限
+
+  # 分天气最优参数（tune_classical.py 搜出来的）
+  profiles:
+    rain:
+      dehaze: false
+      spike_tau: 0.008
+      detail_median: 3
+      second_median: 5
+      bright_median: 9
+      bright_tau: 0.06
+      bright_kernel: horizontal
+      sharpen: 0.0
+    haze:
+      dehaze: true
+      spike_tau: 0.025
+      detail_median: 3
+      second_median: 0
+      bright_median: 0
+      sharpen: 0.25
+    snow:
+      dehaze: false
+      spike_tau: 0.008
+      detail_median: 5
+      second_median: 5
+      bright_median: 7
+      bright_tau: 0.12
+      sharpen: 0.0
