@@ -43,8 +43,8 @@ diffusion:
   num_diffusion_timesteps: 1000
 
 sampling:
-  timesteps: 25           # DDIM 采样步数，越小越快（官方推理默认 25）
-  grid_r: 16              # 滑窗步长，越大越快(patch 数量减少，质量略降)
-  eta: 0.0                # DDIM 随机性，官方推理固定用 0（确定性采样）
+  timesteps: 50           # DDIM 采样步数，25=快速(官方默认), 50=质量优先, 100=最佳
+  grid_r: 12              # 滑窗步长，越小越精细(但更慢)
+  eta: 0.15               # DDIM 随机性，0=确定性(官方推理默认)
   patch_batch_size: 32    # 一次并行推理的 patch 数，显存不足会自动减半
   seed: 61

@@ -1,5 +1,5 @@
 """
-预训练权重下载脚本（模型组第一天执行）。
+预训练权重下载脚本
 
 WeatherDiffusion 官方权重是 TU Graz 的 HTTP 直链，不需要 Google Drive。
 

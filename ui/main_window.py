@@ -1,16 +1,16 @@
 """
 =============================================================================
-【界面组 U1 主战场】主窗口
+主窗口 - 三个 Tab 页面
 =============================================================================
 
 三个 Tab:
-  1. 单图复原   —— 已实现可用版本（打开/拖入图片、参数、进度、对比、指标、另存）
-  2. 批量评测   —— 已实现基础版本（目录选择、后台评测、表格、导出 CSV）
-  3. 关于/环境  —— 显示依赖与指标可用性，排查环境问题很有用
+  1. 单图复原   —— 打开/拖入图片、参数、进度、对比、指标、另存
+  2. 批量评测   —— 目录选择、后台评测、表格、导出 CSV
+  3. 关于/环境  —— 显示依赖与指标可用性，排查环境问题
 
 视觉风格集中在 ui/theme.py，本文件只负责布局与 objectName。
 
-TODO(U1):
+后续可扩展:
   - 批量页加 pyqtgraph 柱状图对比不同方法
   - 记住上次使用的目录与参数（QSettings）
 =============================================================================
@@ -29,6 +29,7 @@ from PyQt5.QtWidgets import (
     QAbstractItemView,
     QAction,
     QCheckBox,
+    QComboBox,
     QFileDialog,
     QFrame,
     QGridLayout,
@@ -131,7 +132,12 @@ class SingleImagePage(QWidget):
         self.save_button = ghost_button("保存结果")
         self.mode_button = ghost_button("擦除 / 并排")
         self.export_button = ghost_button("导出对比图")
+        self.weather_filter = QComboBox()
+        self.weather_filter.addItems(["雨 (rain)", "雾 (haze)", "雪 (snow)", "真实 (real)"])
+        self.weather_filter.setToolTip("选择要载入的天气类型示例")
+        self.weather_filter.setMinimumHeight(28)
         self._sample_index = 0
+        self._sample_files: List[Path] = []
 
         self._build()
         self._connect()
@@ -143,7 +149,7 @@ class SingleImagePage(QWidget):
         self.open_button.setObjectName("PrimaryButton")
         self.open_button.setCursor(Qt.PointingHandCursor)
         self.sample_button.setCursor(Qt.PointingHandCursor)
-        self.sample_button.setToolTip("循环载入 data/samples 里的合成样本（雨 → 雾 → 雪）")
+        self.sample_button.setToolTip("按当前选择的天气类型，循环载入示例图片")
         self.save_button.setEnabled(False)
         self.export_button.setToolTip("把当前对比视图存成图片，写论文/答辩配图直接用")
 
@@ -151,6 +157,9 @@ class SingleImagePage(QWidget):
         toolbar.setSpacing(8)
         for b in (self.open_button, self.sample_button, self.gt_button):
             toolbar.addWidget(b)
+        toolbar.addWidget(self._vline())
+        toolbar.addWidget(QLabel("示例类型:"))
+        toolbar.addWidget(self.weather_filter)
         toolbar.addWidget(self._vline())
         for b in (self.mode_button, self.export_button, self.save_button):
             toolbar.addWidget(b)
@@ -230,6 +239,7 @@ class SingleImagePage(QWidget):
         self.export_button.clicked.connect(self.export_compare)
         self.control.start_requested.connect(self.start_restore)
         self.control.cancel_requested.connect(self.cancel_restore)
+        self.weather_filter.currentIndexChanged.connect(self._on_weather_filter_changed)
 
     def _toggle_mode(self) -> None:
         self.compare.toggle_mode()
@@ -257,11 +267,23 @@ class SingleImagePage(QWidget):
         if path:
             self.load_input(Path(path))
 
-    def load_next_sample(self) -> None:
-        """循环载入 data/samples 里的示例图（雨 -> 雾 -> 雪 -> ...），演示时最方便。"""
+    def _get_sample_files(self) -> List[Path]:
+        """根据天气类型筛选获取示例文件列表。"""
+        weather_map = {
+            0: ("rain",),
+            1: ("haze",),
+            2: ("snow",),
+            3: ("real",),
+        }
+        weathers = weather_map.get(self.weather_filter.currentIndex(), ("rain",))
         files = []
-        for weather in ("rain", "haze", "snow", "real"):
+        for weather in weathers:
             files.extend(list_images(SAMPLES_DIR / weather / "input"))
+        return files
+
+    def load_next_sample(self) -> None:
+        """循环载入 data/samples 里的示例图（按天气类型筛选），演示时最方便。"""
+        files = self._get_sample_files()
         if not files:
             QMessageBox.information(
                 self,
@@ -272,6 +294,13 @@ class SingleImagePage(QWidget):
             return
         self.load_input(files[self._sample_index % len(files)])
         self._sample_index += 1
+
+    def _on_weather_filter_changed(self) -> None:
+        """天气类型切换时重置索引，从该类型第一张开始。"""
+        self._sample_index = 0
+        files = self._get_sample_files()
+        if files:
+            self.status.setText(f"已切换到: {self.weather_filter.currentText()}，共 {len(files)} 张示例")
 
     def open_gt(self) -> None:
         filter_str = "图片 (" + " ".join(f"*{e}" for e in IMAGE_EXTS) + ")"
@@ -416,7 +445,7 @@ class SingleImagePage(QWidget):
             metrics=["psnr", "ssim"] if self.gt_image is not None else [],
         )
         self.metric_panel.update_metrics(metrics)
-        # TODO(评测组): NIQE/BRISQUE 计算较慢，建议放到单独线程后再接进来
+        # 注: NIQE/BRISQUE 计算较慢，可考虑放到单独线程后再接进来
         self.control.set_running(False)
         self.save_button.setEnabled(True)
         self.status.setText(f"复原完成，耗时 {result.elapsed:.2f}s（{result.device}）")
@@ -697,7 +726,7 @@ class BatchEvalPage(QWidget):
             parts.append(f"平均耗时 = {avg_time:.2f}s")
         self.summary_label.setText("均值：" + ("     ".join(parts) if parts else "-"))
         self.status.setText(f"评测完成，共 {len(rows)} 张")
-        # TODO(U2): 这里接 pyqtgraph 柱状图，把不同方法的均值指标画出来
+        # 后续可接 pyqtgraph 柱状图，把不同方法的均值指标画出来
 
     def _on_failed(self, message: str) -> None:
         self.control.set_running(False)

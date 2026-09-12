@@ -1,16 +1,15 @@
 """
 =============================================================================
-【模型组 任务 B】Patch-based DDIM 采样
+Patch-based DDIM 采样算法
 =============================================================================
 
 对应官方文件: WeatherDiffusion/utils/sampling.py
 
-本文件已经写好了**不依赖网络结构**的通用部分（beta 调度、alpha 计算、
-滑窗坐标生成、数据归一化），模型组只需要实现最后一个函数
-generalized_steps_overlapping()。
+本文件实现了扩散模型推理的核心采样逻辑：beta 调度、alpha 计算、
+滑窗坐标生成、数据归一化，以及关键的 generalized_steps_overlapping() 函数。
 
 核心思路（论文的关键做法）:
-  1. 把整图切成 patch_size×patch_size、步长 grid_r 的重叠小块
+  1. 把整图切成 patch_size × patch_size、步长 grid_r 的重叠小块
   2. 每个去噪步里，对所有 patch 分别预测噪声，按位置累加到整图 buffer
   3. 用"每个像素被多少 patch 覆盖"的 mask 做平均，得到整图噪声估计
   4. 再走一步 DDIM 更新，如此循环 sampling_timesteps 次
@@ -19,14 +18,11 @@ generalized_steps_overlapping()。
 """
 
 from __future__ import annotations
-
 from typing import List, Optional, Tuple
-
 import numpy as np
 
-
 # --------------------------------------------------------------------------- #
-# 通用部分（已实现，模型组直接用）
+# 通用工具函数
 # --------------------------------------------------------------------------- #
 def get_beta_schedule(
     beta_schedule: str = "linear",
@@ -110,7 +106,7 @@ def compute_alpha(beta, t):
 
 
 # --------------------------------------------------------------------------- #
-# TODO(模型组): 实现下面这个函数
+# Patch-based DDIM 采样主循环
 # --------------------------------------------------------------------------- #
 def generalized_steps_overlapping(
     x,

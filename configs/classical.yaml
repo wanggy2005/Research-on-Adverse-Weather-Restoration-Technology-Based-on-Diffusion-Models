@@ -42,17 +42,20 @@ classical:
       spike_tau: 0.008
       detail_median: 3
       second_median: 5
-      bright_median: 9
-      bright_tau: 0.06
-      bright_kernel: horizontal
-      sharpen: 0.0
+      bright_median: 11       # 雨滴: 增大窗口覆盖水滴尺寸
+      bright_tau: 0.04        # 雨滴: 降低阈值更积极去除
+      bright_kernel: square   # 雨滴: 方形窗口(水滴圆形)，horizontal 用于雨丝
+      sharpen: 0.15           # 雨滴去除后补充锐度
     haze:
       dehaze: true
       spike_tau: 0.025
       detail_median: 3
       second_median: 0
       bright_median: 0
-      sharpen: 0.25
+      sharpen: 0.3
+      dcp_omega: 0.98       # 浓雾: 极限去雾强度
+      dcp_t0: 0.04          # 浓雾: 极限透射率下限
+      dcp_patch: 25         # 浓雾: 最大暗通道窗口
     snow:
       dehaze: false
       spike_tau: 0.008

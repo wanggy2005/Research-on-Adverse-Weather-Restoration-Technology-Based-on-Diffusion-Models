@@ -1,12 +1,11 @@
 """
-非扩散对照基线：暗通道先验 (Dark Channel Prior, He et al. CVPR 2009) 去雾。
+暗通道先验去雾 (Dark Channel Prior, He et al. CVPR 2009)
 
 特点：纯 numpy 实现，不需要权重、不需要 GPU、不需要 torch，
-所以它是全项目第一天就能跑出真实复原效果的方法，
-既是指标表格里的"传统方法"对照列，也是界面演示的兜底方案。
+开箱即用，可作为"传统方法"对照基线，也是界面演示的兜底方案。
 
-评测组后续可在本目录再加 Restormer / TransWeather 等深度学习对照，
-只要同样继承 BaseRestorer 并 @register_restorer("xxx") 即可。
+扩展更多深度学习对照方法（如 Restormer / TransWeather），
+只需继承 BaseRestorer 并 @register_restorer("xxx") 即可。
 """
 
 from __future__ import annotations

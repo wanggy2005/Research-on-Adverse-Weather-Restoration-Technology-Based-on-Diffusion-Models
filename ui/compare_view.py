@@ -1,9 +1,9 @@
 """
 =============================================================================
-【界面组 U2 任务】原图 / 复原图对比控件
+原图 / 复原图对比控件
 =============================================================================
 
-本文件已实现一个可用的基础版本：
+功能：
   - 等比缩放居中显示，两图共用同一显示区域
   - 滑块擦除对比（拖动中缝或用鼠标左右拖动）
   - 并排模式切换
@@ -237,7 +237,7 @@ class CompareView(QWidget):
     def mouseDoubleClickEvent(self, event) -> None:  # noqa: N802
         self.toggle_mode()
 
-    # TODO(U2): wheelEvent 实现同步缩放，mouseMoveEvent 加平移，再加放大镜绘制
+    # 后续可扩展: wheelEvent 实现同步缩放，mouseMoveEvent 加平移，再加放大镜绘制
 
     def _update_split(self, x: int) -> None:
         target = self._fit_rect(self._before or self._after)

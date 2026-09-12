@@ -122,32 +122,58 @@ def make_clean_scene(size: Tuple[int, int] = (384, 512), seed: int = 0) -> np.nd
 def add_rain(
     image: np.ndarray,
     seed: int = 0,
-    n_streaks: int = 900,
-    veil: float = 0.14,
+    n_streaks: int = 120,
+    veil: float = 0.03,
 ) -> np.ndarray:
-    """雨：大量细长的亮条纹（随机角度/长度/亮度）+ 全局雨幕使对比度下降。"""
+    """雨：短雨丝 + 少量水滴 + 轻微雨幕，模拟 RainDrop/Outdoor-Rain 真实雨形态。
+    
+    与之前版本的关键区别:
+      - 雨丝数量进一步降低(200→120)，避免过密
+      - 雨丝强度上限降低(0.85→0.65)，避免过亮
+      - 雨幕更轻(0.04→0.03)
+    """
     rng = np.random.default_rng(seed + 1000)
     h, w = image.shape[:2]
     mask = np.zeros((h, w), dtype=np.float32)
 
-    angle = rng.uniform(-0.45, 0.45)          # 雨的整体倾斜
+    angle = rng.uniform(-0.15, 0.15)          # 雨的整体倾斜（真实雨接近垂直）
     for _ in range(int(n_streaks)):
         x0 = float(rng.integers(0, w))
         y0 = float(rng.integers(0, h))
-        length = int(rng.integers(10, 34))
-        strength = float(rng.uniform(0.35, 1.0))
-        jitter = angle + rng.uniform(-0.08, 0.08)
+        length = int(rng.integers(4, 14))     # 短雨丝
+        strength = float(rng.uniform(0.2, 0.65))  # 降低上限，避免过亮
+        jitter = angle + rng.uniform(-0.05, 0.05)
+        width = rng.integers(1, 3)            # 1~2 像素宽
         for k in range(length):
             y = int(y0 + k)
             x = int(x0 + k * jitter)
-            if 0 <= y < h and 0 <= x < w:
-                mask[y, x] = max(mask[y, x], strength)
+            for dw in range(width):
+                xx = x + dw
+                if 0 <= y < h and 0 <= xx < w:
+                    mask[y, xx] = max(mask[y, xx], strength)
 
-    mask = np.clip(box_filter(mask, 1) * 1.7, 0.0, 1.0)      # 让条纹有宽度和柔边
+    # 少量圆形水滴（模拟镜头上的雨滴）
+    n_drops = int(n_streaks * 0.15)
+    for _ in range(n_drops):
+        cx = int(rng.integers(0, w))
+        cy = int(rng.integers(0, h))
+        radius = float(rng.uniform(1.5, 4.0))
+        strength = float(rng.uniform(0.4, 0.9))
+        r = int(np.ceil(radius)) + 1
+        y0, y1 = max(0, cy - r), min(h, cy + r + 1)
+        x0, x1 = max(0, cx - r), min(w, cx + r + 1)
+        if y1 <= y0 or x1 <= x0:
+            continue
+        ly, lx = np.mgrid[y0:y1, x0:x1].astype(np.float32)
+        d = np.sqrt((ly - cy) ** 2 + (lx - cx) ** 2)
+        blob = np.clip(1.0 - d / (radius + 0.5), 0.0, 1.0) * strength
+        mask[y0:y1, x0:x1] = np.maximum(mask[y0:y1, x0:x1], blob)
+
+    mask = np.clip(box_filter(mask, 1) * 1.4, 0.0, 1.0)      # 轻微柔化
     arr = image.astype(np.float32)
     rain_color = np.array([232, 236, 242], dtype=np.float32)
     out = arr * (1.0 - mask[:, :, None]) + rain_color[None, None, :] * mask[:, :, None]
-    # 雨幕：整体发灰
+    # 雨幕：整体轻微发灰
     out = out * (1.0 - veil) + 205.0 * veil
     return np.clip(out, 0, 255).astype(np.uint8)
 

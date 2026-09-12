@@ -38,8 +38,8 @@ diffusion:
   num_diffusion_timesteps: 1000
 
 sampling:
-  timesteps: 25
-  grid_r: 16
-  eta: 0.0
+  timesteps: 100          # 去雾需要最多步数恢复对比度
+  grid_r: 8               # 最精细滑窗
+  eta: 0.3                # 较高随机性帮助恢复细节
   patch_batch_size: 32
   seed: 61
